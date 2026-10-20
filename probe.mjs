@@ -13,11 +13,12 @@ const expected=new Map([
   ['files_databases_drugs_new_israeli_drugs_03092026.xlsx','0c2167eb5f2ccc323988629596425469e6ff5afc311163bb90b791d61221e7dd'],
   ['files_databases_drugs_new_israeli_drugs_07102026.xlsx','6b7e1a7ca4519fafe43b2ed73692bb503f1829612ef74bcd90729b4747042cd3']
 ]);
-const report={startedAt:new Date().toISOString(),executedIn:process.env.GITHUB_ACTIONS==='true'?'GitHub-hosted standard Ubuntu runner':'Local test',sourceAccessPassed:false,catalogPassed:false,downloadsPassed:false,registryAccessPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false,monthlyScheduleEnabled:false};
+const headed=process.env.MOH_BROWSER_MODE==='headed';
+const report={startedAt:new Date().toISOString(),executedIn:process.env.GITHUB_ACTIONS==='true'?'GitHub-hosted standard Ubuntu runner':'Local test',browserMode:headed?'headed Chrome with virtual display':'headless Chrome',sourceAccessPassed:false,catalogPassed:false,downloadsPassed:false,registryAccessPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false,monthlyScheduleEnabled:false};
 let phase='browser-discovery';
 try{
   const {chromium}=await import('playwright');
-  report.catalog=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:true,timeout:25000}));
+  report.catalog=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:!headed,timeout:25000}));
   report.catalogPassed=true;
   if(report.catalog.releases.length>16)throw Error('Source acquisition exceeds the bounded test size');
   phase='exact-monthly-downloads';report.files=[];
