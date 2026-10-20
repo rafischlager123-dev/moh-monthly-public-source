@@ -17,7 +17,7 @@ const files=JSON.parse(await readFile(path.join(root,'publication-files.json'),'
 if(!Array.isArray(files)||files.length<10||files.length>1500)throw Error('Public publication set exceeds reviewed bounds');
 const tree=[];
 for(const file of files){
-  if(!/^public\/(?:monthly\/[a-f0-9]{64}\.(?:xml|xlsx)|runs\/\d+\/(?:registry-\d{3}\.xml|manifest\.json)|catalog\.json|latest\.xml)$/.test(file.path))throw Error('Publication contains a non-source path');
+  if(!/^public\/(?:monthly\/[a-f0-9]{64}\.(?:xml|xlsx)|runs\/\d+\/(?:registry-\d{3}\.xml|package-\d{3}\.xml|package-index\.xml|manifest\.json)|catalog\.json|latest\.xml|package-latest\.xml)$/.test(file.path))throw Error('Publication contains a non-source path');
   const name=await realpath(path.join(root,file.path));if(!name.startsWith(root+path.sep))throw Error('Public source path escapes generated collection');
   const bytes=await readFile(name);
   if(bytes.length!==file.bytes||bytes.length>4*1024*1024||createHash('sha256').update(bytes).digest('hex')!==file.sha256)throw Error('Generated public source changed before publishing');
