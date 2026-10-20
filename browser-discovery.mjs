@@ -6,7 +6,9 @@ export function allowedBrowserUrl(value) {
 }
 
 // Ordinary Playwright/Chrome. No proxy, stealth, identity spoofing or challenge handling.
-export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000}={}) {
+export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,pageUrl=MONTHLY_PAGE}={}) {
+  const target=new URL(pageUrl);
+  if(!allowedBrowserUrl(target.href)||target.hostname!=='www.gov.il'||target.pathname.toLowerCase()!=='/he/departments/dynamiccollectors/new-israeli-drugs'||target.search!=='?skip=0'||target.hash)throw Error('Discovery must use the official monthly listing');
   let browser,context,expired=false,closePromise,timer;
   const started=Date.now(),items=[],seen=new Set();
   const close=()=>closePromise??=(browser?Promise.resolve(browser.close()).catch(()=>{}):Promise.resolve());
@@ -22,7 +24,7 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000}
       return route.continue();
     });
     const page=await context.newPage();
-    const response=await page.goto(MONTHLY_PAGE,{waitUntil:'domcontentloaded',timeout:remaining(25000)});
+    const response=await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:remaining(25000)});
     if(!response||response.status()>=400)throw Error('Official listing blocked: HTTP '+(response?.status()??'unknown'));
     for(let n=0;n<3;n++){
       await page.waitForSelector('a[href*="/BlobFolder/dynamiccollectorresultitem/"]',{timeout:remaining(15000)});
@@ -45,10 +47,10 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000}
       const first=state.items.find(x=>monthlyFileUrl(x.url))?.url;
       if(!first||seen.has(first))throw Error('Listing has no new accepted publication links');
       seen.add(first);items.push(...state.items);
-      try {return {...normalizeCatalog(items,baseline),source:MONTHLY_PAGE,pagesVisited:seen.size,pageTitle:state.pageTitle,discoverySeconds:Math.ceil((Date.now()-started)/1000)};}
+      try {return {...normalizeCatalog(items,baseline),source:target.href,pagesVisited:seen.size,pageTitle:state.pageTitle,listingSnapshot:items,observedAt:new Date().toISOString(),discoverySeconds:Math.ceil((Date.now()-started)/1000)};}
       catch(error){if(!String(error.message).includes('No verified release below the baseline'))throw error;}
       if(state.nextIndex<0)throw Error('No next-page control before baseline boundary');
-      if(state.nextUrl){const u=new URL(state.nextUrl);if(u.origin!=='https://www.gov.il'||u.pathname!=='/he/departments/dynamiccollectors/new-israeli-drugs')throw Error('Pagination escaped official listing');}
+      if(state.nextUrl){const u=new URL(state.nextUrl);if(u.origin!=='https://www.gov.il'||u.pathname.toLowerCase()!=='/he/departments/dynamiccollectors/new-israeli-drugs')throw Error('Pagination escaped official listing');}
       await page.locator('a,button,[role="button"]').nth(state.nextIndex).click({timeout:remaining(10000)});
       await page.waitForFunction(previous=>{
         const a=[...document.querySelectorAll('a[href*="/BlobFolder/dynamiccollectorresultitem/"]')].find(e=>e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0);
