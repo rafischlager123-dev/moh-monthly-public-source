@@ -22,7 +22,7 @@ try{
   const heldOut=known.releases.at(-1);
   report.heldOutLatestRelease={previousStateExcludesPeriod:heldOut.periods,discoveredWithoutSeed:catalog.releases.some(r=>r.url===heldOut.url),downloadedOriginalSha256:report.files.find(f=>f.url===heldOut.url)?.sha256||null};
   if(!report.heldOutLatestRelease.discoveredWithoutSeed)throw Error('Live catalog missed the independently known latest release');
-}catch(error){report.error=String(error.message||error).slice(0,1800);process.exitCode=2;}
+}catch(error){report.error=String(error.message||error).slice(0,1800);report.discoveryDiagnostics=error.discoveryDiagnostics||null;process.exitCode=2;}
 report.finishedAt=new Date().toISOString();
 console.log('DIRECT_DISCOVERY_RESULT '+JSON.stringify(report));
 if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,'# Direct official release discovery proof\n\n```json\n'+JSON.stringify(report,null,2).replace(/`/g,'\\u0060')+'\n```\n');
