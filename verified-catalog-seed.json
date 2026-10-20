@@ -1,0 +1,87 @@
+{
+  "schema": "public-moh-verified-catalog-v1",
+  "verifiedOn": "2026-10-20",
+  "baselineInclusive": "2025-12",
+  "officialListing": "https://www.gov.il/he/departments/dynamiccollectors/new-israeli-drugs?skip=0",
+  "releases": [
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-december-2025/he/files_databases_drugs_new_israeli_drugs_01012026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - דצמבר 2025",
+      "periods": [
+        "2025-12"
+      ],
+      "publicationDate": "2026-01-01",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - דצמבר 2025\nתאריך\n1.1.2026",
+      "sha256": "8fa37795317aa8fc38651c13fa7ec35d7b29618c71a12a8740bac4418f8089fd"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/12042026/he/files_databases_drugs_new_israeli_drugs_12042026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - פברואר-מרץ 2026",
+      "periods": [
+        "2026-02",
+        "2026-03"
+      ],
+      "publicationDate": "2026-04-12",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - פברואר-מרץ 2026\nתאריך\n12.4.2026",
+      "sha256": "cd414102e677c11e658bee68af19bcb269d05a966d1f2c99e1fc6614d46b783e"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-april-may-2026/he/files_databases_drugs_new_israeli_drugs_04062026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - אפריל-מאי 2026",
+      "periods": [
+        "2026-04",
+        "2026-05"
+      ],
+      "publicationDate": "2026-06-04",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - אפריל-מאי 2026\nתאריך\n4.6.2026",
+      "sha256": "ec70c06c871faa3809cfb193375f886733c145abaa8f62152775defe5bf46355"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-june-2026/he/files_databases_drugs_new_israeli_drugs_05072026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - יוני 2026",
+      "periods": [
+        "2026-06"
+      ],
+      "publicationDate": "2026-07-05",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - יוני 2026\nתאריך\n5.7.2026",
+      "sha256": "5901f3e41a731e2bf9ffcfc14111d56de9d6308fa4712428ff4de527de779aa1"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-july-2026/he/files_databases_drugs_new_israeli_drugs_16082026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - יולי 2026",
+      "periods": [
+        "2026-07"
+      ],
+      "publicationDate": "2026-08-16",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - יולי 2026\nתאריך\n16.8.2026",
+      "sha256": "c69285ba94c2d15e419567d350a6a536a841b14f08270763b7e91e236a34c399"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-august-2026/he/files_databases_drugs_new_israeli_drugs_03092026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - אוגוסט 2026",
+      "periods": [
+        "2026-08"
+      ],
+      "publicationDate": "2026-09-03",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - אוגוסט 2026\nתאריך\n3.9.2026",
+      "sha256": "0c2167eb5f2ccc323988629596425469e6ff5afc311163bb90b791d61221e7dd"
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/dynamiccollectorresultitem/new-israeli-drugs-september-2026/he/files_databases_drugs_new_israeli_drugs_07102026.xlsx",
+      "label": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - ספטמבר 2026",
+      "periods": [
+        "2026-09"
+      ],
+      "publicationDate": "2026-10-07",
+      "publicationDateMissing": false,
+      "rawPublicationText": "תכשירים חדשים שנרשמו בפנקס התרופות של מדינת ישראל - ספטמבר 2026\nתאריך\n7.10.2026",
+      "sha256": "6b7e1a7ca4519fafe43b2ed73692bb503f1829612ef74bcd90729b4747042cd3"
+    }
+  ]
+}
