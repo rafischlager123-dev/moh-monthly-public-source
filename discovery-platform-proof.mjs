@@ -6,13 +6,16 @@ import {discoverMonthly} from './browser-discovery.mjs';
 import {fetchMonthlyFile,digest,bytesOf} from './public-core.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 if(process.env.GITHUB_ACTIONS!=='true'||process.env.GITHUB_REPOSITORY!=='rafischlager123-dev/moh-monthly-public-source')throw Error('Dedicated public cloud test only');
-const report={schema:'public-moh-direct-discovery-proof-v1',runId:process.env.GITHUB_RUN_ID,runnerOS:process.env.RUNNER_OS,runnerArch:process.env.RUNNER_ARCH,browserChannel:process.env.MOH_BROWSER_CHANNEL,startedAt:new Date().toISOString(),sourceDiscoveryPassed:false,originalDownloadsPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false};
+const engineName=process.env.MOH_BROWSER_ENGINE||'chromium';
+if(!['chromium','firefox','webkit'].includes(engineName))throw Error('Unknown official browser engine');
+const report={schema:'public-moh-direct-discovery-proof-v1',runId:process.env.GITHUB_RUN_ID,runnerOS:process.env.RUNNER_OS,runnerArch:process.env.RUNNER_ARCH,browserEngine:engineName,browserChannel:process.env.MOH_BROWSER_CHANNEL,startedAt:new Date().toISOString(),sourceDiscoveryPassed:false,originalDownloadsPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false};
 // This revision tests the official API from an actual, newly opened government
 // page. Browser-generated Origin/Referer are used; no header impersonation,
 // imported profile/cookies, verification-control interaction, or private data.
-const publicApiProofOnly=true;
-async function publicApiProof(chromium){
-  const browser=await chromium.launch({channel:process.env.MOH_BROWSER_CHANNEL,headless:false,timeout:30000});
+const publicApiProofOnly=process.env.MOH_PROOF_MODE==='api';
+const launchOptions={headless:false,timeout:30000,...(engineName==='chromium'&&process.env.MOH_BROWSER_CHANNEL?{channel:process.env.MOH_BROWSER_CHANNEL}:{})};
+async function publicApiProof(browserType){
+  const browser=await browserType.launch(launchOptions);
   try{
     const context=await browser.newContext(),page=await context.newPage();
     const response=await page.goto('https://www.gov.il/',{waitUntil:'domcontentloaded',timeout:30000});
@@ -40,14 +43,14 @@ async function publicApiProof(chromium){
   }finally{await browser.close();}
 }
 try{
-  const {chromium}=await import('playwright');
+  const engines=await import('playwright'),browserType=engines[engineName];
   if(publicApiProofOnly){
-    report.publicApiProof=await publicApiProof(chromium);
+    report.publicApiProof=await publicApiProof(browserType);
     report.publicApiAccessPassed=report.publicApiProof.passed;
     report.discoveryAndDownloadAcceptanceStillRequired=true;
     if(!report.publicApiAccessPassed)process.exitCode=2;
   }else{
-  const catalog=await discoverMonthly(()=>chromium.launch({channel:process.env.MOH_BROWSER_CHANNEL,headless:false,timeout:30000}),{pageUrl:'https://www.gov.il/he/Departments/DynamicCollectors/new-israeli-drugs?skip=0',budgetMs:150000,standardPageLoading:true});
+  const catalog=await discoverMonthly(()=>browserType.launch(launchOptions),{pageUrl:'https://www.gov.il/he/Departments/DynamicCollectors/new-israeli-drugs?skip=0',budgetMs:150000,standardPageLoading:true});
   report.catalog=catalog;report.catalogSnapshotSha256=await digest(bytesOf(catalog.listingSnapshot));report.sourceDiscoveryPassed=true;
   const known=JSON.parse(await readFile(new URL('./verified-catalog-seed.json',import.meta.url),'utf8'));
   const expected=new Map(known.releases.map(r=>[r.url,r.sha256]));report.files=[];
