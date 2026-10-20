@@ -2,8 +2,10 @@ import {webcrypto} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {monthlyFileUrl,publicationPeriods,fetchMonthlyFile,registryVersion,registryPage,rss,digest,bytesOf} from './public-core.mjs';
 import {discoverMonthly} from './browser-discovery.mjs';
+import {originalLinksFromHtml,reconcileNewRegistrationCoverage} from './directory-reconciliation.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 const association='https://psi.org.il/he/pharma-rules';
 
@@ -28,23 +30,13 @@ export function mergeCatalog(seed,prior,direct,alternate){
   return {schema:'public-moh-catalog-v1',baselineInclusive:seed.baselineInclusive,officialCatalogVerifiedOn:direct?new Date().toISOString().slice(0,10):seed.verifiedOn,officialCatalogCompleteAtCurrentCollection:!!direct,discoveryCoverageReviewRequired:!direct,publicationDatesComplete:releases.every(x=>!!x.publicationDate),releases};
 }
 
-async function associationLinks(chromium){
-  const browser=await chromium.launch({channel:'chrome',headless:false,timeout:25000});
-  try{
-    const page=await browser.newPage();
-    const response=await page.goto(association,{waitUntil:'domcontentloaded',timeout:25000});
-    if(!response?.ok())throw Error('Public pharmacy directory HTTP '+response?.status());
-    await page.waitForSelector('a[href*="/BlobFolder/dynamiccollectorresultitem/"]',{state:'attached',timeout:15000});
-    const anchors=await page.locator('a[href]').evaluateAll(elements=>elements.map(a=>({url:a.href,label:(a.textContent||'').trim()})));
-    const found=[],seen=new Set();
-    for(const a of anchors){
-      const url=monthlyFileUrl(a.url);if(!url||seen.has(url)||!a.label.includes('תכשירים חדשים שנרשמו'))continue;
-      const periods=publicationPeriods(a.label);if(periods.at(-1)<'2025-12')continue;
-      seen.add(url);found.push({url,label:a.label,periods,publicationDate:null,publicationDateMissing:true});
-    }
-    if(!found.length||found.length>60)throw Error('No bounded set of original government Excel links found in public directory');
-    return found;
-  }finally{await browser.close();}
+async function associationLinks(){
+  const response=await fetch(association,{redirect:'error',signal:AbortSignal.timeout(30000)});
+  if(!response.ok)throw Error('Public pharmacy directory HTTP '+response.status);
+  const reader=response.body.getReader(),chunks=[];let length=0;
+  try{while(true){const {value,done}=await reader.read();if(done)break;length+=value.byteLength;if(length>2000000)throw Error('Public directory exceeds the reviewed bound');chunks.push(value);}}
+  finally{await reader.cancel().catch(()=>{});}
+  return originalLinksFromHtml(Buffer.concat(chunks).toString('utf8'));
 }
 
 export async function collectRegistry(fetchPage=registryPage,getVersion=registryVersion){
@@ -78,13 +70,15 @@ export async function runCollection(){
   try{prior=JSON.parse(await readFile('public/catalog.json','utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
   let direct=null,directError=null;
   try{direct=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:false,timeout:25000}));}catch(error){directError=String(error.message||error).slice(0,1000);}
-  const alternate=await associationLinks(chromium),catalog=mergeCatalog(seed,prior,direct,alternate);
+  const alternate=await associationLinks(),catalog=mergeCatalog(seed,prior,direct,alternate);
   const out=path.resolve('collection-output'),snapshot='public/runs/'+runId,files=[];
   const save=async(name,data)=>{if(!/^public\/[A-Za-z0-9_./-]+$/.test(name)||name.includes('..'))throw Error('Invalid public output path');const bytes=Buffer.from(data);if(bytes.length>4*1024*1024)throw Error('Public output exceeds size bound');await mkdir(path.dirname(path.join(out,name)),{recursive:true});await writeFile(path.join(out,name),bytes);files.push({path:name,bytes:bytes.length,sha256:await digest(bytes)});};
   const downloaded=[];
+  await mkdir('source-http-proof',{recursive:true});
   for(const release of catalog.releases){
     const file=await fetchMonthlyFile(release);
     if(release.sha256&&file.proof.sha256!==release.sha256)throw Error('An archived official release changed; previous publication retained');
+    await writeFile('source-http-proof/'+file.proof.sha256+'.xlsx',file.bytes);
     const manifest={schema:'rafa-monthly-source-manifest-v1',url:release.url,label:release.label,periods:release.periods,publicationDate:release.publicationDate||null,sha256:file.proof.sha256,bytes:file.proof.bytes,fetchedAt:file.proof.fetchedAt};
     const feedPath='public/monthly/'+file.proof.sha256+'.xml';
     await save('public/monthly/'+file.proof.sha256+'.xlsx',file.bytes);
@@ -92,13 +86,19 @@ export async function runCollection(){
     downloaded.push({...release,sha256:file.proof.sha256,bytes:file.proof.bytes,fetchedAt:file.proof.fetchedAt,feedPath});
   }
   const registry=await collectRegistry(),registryPages=[];
+  await writeFile('source-http-proof/files.json',JSON.stringify(downloaded));
+  const originalRows=JSON.parse(execFileSync('python',['public-xlsx-registration-audit.py'],{encoding:'utf8',timeout:60000,maxBuffer:2000000}));
+  const acquired=new Date(),through=new Date(Date.UTC(acquired.getUTCFullYear(),acquired.getUTCMonth(),0)).toISOString().slice(0,7);
+  const recordCoverage=reconcileNewRegistrationCoverage(registry.pages.flatMap(p=>p.rows),originalRows,{baseline:seed.baselineInclusive,through});
+  if(!recordCoverage.recordCoveragePassed)throw Error('Monthly originals have a registration coverage gap or disagreement; previous public collection retained');
+  const monthlyRecordCoverage={...recordCoverage,originalSourceFiles:originalRows.length,originalRecordAuditSha256:await digest(bytesOf(originalRows)),sourceFileAudits:await Promise.all(originalRows.map(async f=>({sha256:f.sha256,periods:f.periods,records:f.registrations.length,registrationSetSha256:await digest(bytesOf([...f.registrations].sort()))})))};
   for(const page of registry.pages){
     const feedPath=snapshot+'/registry-'+String(page.pageNumber).padStart(3,'0')+'.xml';
     await save(feedPath,rss({schema:'public-moh-registry-page-v1',runId,version:registry.version,totalRecords:registry.totalRecords,pageNumber:page.pageNumber,records:page.records,sha256:page.sha256,rows:page.rows},runId+'-registry-'+page.pageNumber,startedAt,'https://registries.health.gov.il/Medicines'));
     registryPages.push({pageNumber:page.pageNumber,records:page.records,sha256:page.sha256,feedPath});
   }
   const {pages,...registryProof}=registry;
-  const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,releases:downloaded,registry:{...registryProof,pages:registryPages}};
+  const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,associationDiscoveryTransport:'ordinary HTTPS',monthlyRecordCoverage,releases:downloaded,registry:{...registryProof,pages:registryPages}};
   await save('public/catalog.json',JSON.stringify(manifest,null,2));
   await save(snapshot+'/manifest.json',JSON.stringify(manifest,null,2));
   await save('public/latest.xml',rss(manifest,'public-moh-collection-'+runId,manifest.completedAt,'https://github.com/rafischlager123-dev/moh-monthly-public-source'));
