@@ -3,8 +3,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 1 * * *'
-    # Temporary unattended acceptance on 20 October; removed after observed run.
-    - cron: '17 16 20 10 *'
 permissions:
   contents: write
 concurrency:
