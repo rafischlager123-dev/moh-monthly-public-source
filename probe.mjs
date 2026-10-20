@@ -21,8 +21,8 @@ async function discoverAssociation(chromium){
     const context=await browser.newContext(),page=await context.newPage();
     const response=await page.goto(source,{waitUntil:'domcontentloaded',timeout:25000});
     if(!response?.ok())throw Error('Association discovery page HTTP '+response?.status());
-    await page.waitForSelector('a[href*="/BlobFolder/dynamiccollectorresultitem/"]',{timeout:15000});
-    const anchors=await page.locator('a[href]').evaluateAll(elements=>elements.map(a=>({url:a.href,label:(a.innerText||'').trim()})));
+    await page.waitForSelector('a[href*="/BlobFolder/dynamiccollectorresultitem/"]',{state:'attached',timeout:15000});
+    const anchors=await page.locator('a[href]').evaluateAll(elements=>elements.map(a=>({url:a.href,label:(a.textContent||'').trim()})));
     const releases=[],seen=new Set();
     for(const anchor of anchors){
       const url=monthlyFileUrl(anchor.url);
