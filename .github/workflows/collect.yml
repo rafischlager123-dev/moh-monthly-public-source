@@ -1,6 +1,11 @@
 name: Collect original public monthly Excel sources
 on:
   workflow_dispatch:
+    inputs:
+      test_visible_hold:
+        description: 'Test a visible source Hold without collecting or replacing the last good package'
+        type: boolean
+        default: false
   schedule:
     - cron: '17 1 * * *'
 permissions:
@@ -18,15 +23,24 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
-      - name: Install fixed official browser library
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.64.1
+      - name: Verify public Ready and Hold transport rules
+        run: node --test source-attempt.test.mjs
       - name: Install fixed public original-file registration reader
+        if: inputs.test_visible_hold != true
         run: python -m pip install --disable-pip-version-check --no-cache-dir openpyxl==3.1.5 et_xmlfile==2.0.0
       - name: Collect original Excel files and a complete stable public registry
-        run: xvfb-run --auto-servernum node collector.mjs
+        if: inputs.test_visible_hold != true
+        run: node collector.mjs
+      - name: Intentional public source Hold test
+        if: inputs.test_visible_hold == true
+        run: node -e "throw new Error('Intentional public-source Hold acceptance test')"
       - name: Publish public source data in one commit
+        if: success() && inputs.test_visible_hold != true
         env:
           GH_TOKEN: ${{ github.token }}
         run: node publish.mjs
+      - name: Record a visible source Hold and keep the last good package
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node source-attempt.mjs held
