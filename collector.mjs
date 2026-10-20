@@ -4,7 +4,6 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {monthlyFileUrl,publicationPeriods,fetchMonthlyFile,registryVersion,registryPage,rss,digest,bytesOf} from './public-core.mjs';
-import {discoverMonthly} from './browser-discovery.mjs';
 import {originalLinksFromHtml,reconcileNewRegistrationCoverage} from './directory-reconciliation.mjs';
 import {buildCompactPackage} from './compact-package.mjs';
 import {sourceAttempt,sourceAttemptFeed} from './source-attempt.mjs';
@@ -65,13 +64,14 @@ export async function collectRegistry(fetchPage=registryPage,getVersion=registry
 
 export async function runCollection(){
   if(process.env.GITHUB_ACTIONS!=='true'||process.env.GITHUB_REPOSITORY!=='rafischlager123-dev/moh-monthly-public-source')throw Error('Collection runs only in the dedicated public source repository');
-  const {chromium}=await import('playwright'),startedAt=new Date().toISOString(),runId=process.env.GITHUB_RUN_ID;
+  const startedAt=new Date().toISOString(),runId=process.env.GITHUB_RUN_ID;
   if(!/^\d+$/.test(runId||''))throw Error('Invalid public collection identity');
   const seed=JSON.parse(await readFile(new URL('./verified-catalog-seed.json',import.meta.url),'utf8'));
   let prior=null;
   try{prior=JSON.parse(await readFile('public/catalog.json','utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
-  let direct=null,directError=null;
-  try{direct=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:false,timeout:25000}));}catch(error){directError=String(error.message||error).slice(0,1000);}
+  // The accepted source standard uses the tested ordinary-HTTPS directory
+  // plus full official-registry reconciliation. No browser runtime is needed.
+  const direct=null,directError=null;
   const alternate=await associationLinks(),catalog=mergeCatalog(seed,prior,direct,alternate);
   const out=path.resolve('collection-output'),snapshot='public/runs/'+runId,files=[];
   const save=async(name,data)=>{if(!/^public\/[A-Za-z0-9_./-]+$/.test(name)||name.includes('..'))throw Error('Invalid public output path');const bytes=Buffer.from(data);if(bytes.length>4*1024*1024)throw Error('Public output exceeds size bound');await mkdir(path.dirname(path.join(out,name)),{recursive:true});await writeFile(path.join(out,name),bytes);files.push({path:name,bytes:bytes.length,sha256:await digest(bytes)});};
@@ -101,7 +101,7 @@ export async function runCollection(){
     registryPages.push({pageNumber:page.pageNumber,records:page.records,sha256:page.sha256,feedPath});
   }
   const {pages,...registryProof}=registry;
-  const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,associationDiscoveryTransport:'ordinary HTTPS',monthlyRecordCoverage,releases:downloaded,registry:{...registryProof,pages:registryPages}};
+  const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,officialCatalogDiscoveryAttempted:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,associationDiscoveryTransport:'ordinary HTTPS',monthlyRecordCoverage,releases:downloaded,registry:{...registryProof,pages:registryPages}};
   const compact=await buildCompactPackage({manifest,originals:originalBytes,registryRows:registry.pages.flatMap(p=>p.rows),originalAudits:originalRows});
   manifest.compactPackage={indexFeedPath:snapshot+'/package-index.xml',sha256:compact.index.package.sha256,bytes:compact.index.package.bytes,parts:compact.index.package.parts.length,sourceAcceptanceBasis:compact.index.sourceAcceptanceBasis};
   for(const file of compact.files)await save(file.path,file.text);
