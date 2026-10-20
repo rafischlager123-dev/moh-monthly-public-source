@@ -1,0 +1,11 @@
+{
+  "schema": "public-moh-source-attempt-v1",
+  "state": "Held",
+  "runId": "39482850285",
+  "codeCommit": "bd805bb7260fef884f19f92dbd499b74e157dee1",
+  "completedAt": "2026-10-20T19:22:21.542Z",
+  "packageSha256": null,
+  "reason": "Source collection or publication failed; retain the last good package and retry",
+  "companyWorkbookAccess": false,
+  "productionPublicationPerformed": false
+}
