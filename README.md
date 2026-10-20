@@ -17,19 +17,25 @@ finished-month coverage window until that month ends.
 Record-set reconciliation does not prove discovery of every revised publication
 edition. `officialCatalogCompleteAtCurrentCollection` and
 `discoveryCoverageReviewRequired` retain their separate meanings. A passing
-registration check does not waive the private consumer's catalog gate or imply
+registration check is the confirmed source acceptance basis. It does not imply
 that the whole monthly workbook refresh is implemented.
 
 The full collection run collected seven original government Excel releases and
 15,262 unique registry medicine IDs across 153 pages. Every published original,
 RSS byte payload and registry page passed independent readback checks.
 
-The collection workflow runs on the 20th, 21st and 22nd of each month at 01:17
-UTC. The latter days provide automatic retries while the user's computer is
+The collection workflow runs daily at 01:17 UTC. Daily runs provide automatic
+retries for late or failed releases while the user's computer is
 off. It uses a standard free public GitHub runner and publishes public data in
 one commit after validation. It has no Actions artifact/cache upload, larger
 runner or paid API. Its temporary GitHub job token writes to this public
 repository. No company workbook or Microsoft credentials enter GitHub.
+
+One logical compact package replaces per-page imports into Microsoft 365.
+`public/package-latest.xml` identifies immutable bounded parts with part and
+whole-package SHA-256 digests. It contains exact original Excel bytes and a
+stable complete compact registry. The private consumer must verify actual
+transferred bytes before processing; declared hash equality is insufficient.
 
 The public pharmacy organization directory supplies original government file
 links when the government listing refuses cloud access. Seven historical
