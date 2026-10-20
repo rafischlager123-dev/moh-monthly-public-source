@@ -1,7 +1,9 @@
 import {MONTHLY_PAGE,monthlyFileUrl,normalizeCatalog} from './public-core.mjs';
 
 export function allowedBrowserUrl(value) {
-  try {const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['www.gov.il','gov.il','cdn.gov.il'].includes(u.hostname);}
+  // The last two hosts are script sources actually published in the official
+  // listing DOM. Let the ordinary page load its own dependencies normally.
+  try {const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['www.gov.il','gov.il','cdn.gov.il','cdn.gbqofs.com','analytics.egov.gov.il'].includes(u.hostname);}
   catch {return false;}
 }
 
@@ -10,7 +12,7 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,
   const target=new URL(pageUrl);
   if(!allowedBrowserUrl(target.href)||target.hostname!=='www.gov.il'||target.pathname.toLowerCase()!=='/he/departments/dynamiccollectors/new-israeli-drugs'||target.search!=='?skip=0'||target.hash)throw Error('Discovery must use the official monthly listing');
   let browser,context,page,expired=false,closePromise,timer;
-  const blockedResources=[];
+  const blockedResources=[],failedResponses=[];
   const started=Date.now(),items=[],seen=new Set();
   const close=()=>closePromise??=(browser?Promise.resolve(browser.close()).catch(()=>{}):Promise.resolve());
   const remaining=max=>{const n=budgetMs-(Date.now()-started);if(expired||n<=0)throw Error('Browser discovery time budget exceeded');return Math.max(1,Math.min(max,n));};
@@ -19,6 +21,7 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,
     // A launcher that settles after the deadline must close its late browser.
     if(expired){closePromise=undefined;await close();throw Error('Browser launch exceeded time budget');}
     context=await browser.newContext();
+    if(typeof context.on==='function')context.on('response',r=>{if(r.status()>=400&&failedResponses.length<30){const u=new URL(r.url());failedResponses.push({url:u.origin+u.pathname,status:r.status()});}});
     await context.route('**/*',route=>{
       const request=route.request();
       if(!allowedBrowserUrl(request.url())||['image','font','media'].includes(request.resourceType())){
@@ -69,7 +72,7 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,
     // Public page diagnostics only, captured before closing the disposable cloud
     // browser. Never act on a challenge or inspect a user's authenticated state.
     if(!expired&&page&&typeof page.title==='function'){
-      try{error.discoveryDiagnostics={title:await page.title(),url:page.url(),bodyText:(await page.locator('body').innerText({timeout:2000})).slice(0,5000),scriptUrls:await page.locator('script[src]').evaluateAll(es=>es.map(e=>e.src)),blockedResources};}catch{}
+      try{error.discoveryDiagnostics={title:await page.title(),url:page.url(),bodyText:(await page.locator('body').innerText({timeout:2000})).slice(0,5000),scriptUrls:await page.locator('script[src]').evaluateAll(es=>es.map(e=>e.src)),blockedResources,failedResponses};}catch{}
     }
     throw error;
   }
