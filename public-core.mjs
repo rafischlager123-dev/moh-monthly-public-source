@@ -121,7 +121,7 @@ export async function registryVersion(fetcher=fetch) {
 }
 export async function registryPage(pageNumber,expectedTotal=null,fetcher=fetch) {
   if(!Number.isInteger(pageNumber)||pageNumber<0||pageNumber>=Math.ceil(MAX_REGISTRY_ROWS/PAGE_SIZE))throw Error('Registry page outside free-plan bound');
-  const data=await officialJson(REGISTRY_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sortBy:'tradeNameHeb',sortDirection:'asc',maxResult:PAGE_SIZE,pageNumber,includeActive:true,includeCanceled:true})},fetcher);
+  const data=await officialJson(REGISTRY_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sortBy:'medicineId',sortDirection:'asc',maxResult:PAGE_SIZE,pageNumber,includeActive:true,includeCanceled:true})},fetcher);
   if(!Number.isInteger(data.totalRows)||data.totalRows<1||data.totalRows>MAX_REGISTRY_ROWS||(expectedTotal!==null&&data.totalRows!==expectedTotal)||data.pageNumber!==pageNumber||data.maxResults!==PAGE_SIZE)throw Error('Registry pagination/version changed');
   const rows=data.medicinesList,expected=Math.min(PAGE_SIZE,data.totalRows-pageNumber*PAGE_SIZE);
   if(!Array.isArray(rows)||expected<1||rows.length!==expected)throw Error('Missing registry records on a page');

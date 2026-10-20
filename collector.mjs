@@ -53,10 +53,11 @@ export async function collectRegistry(fetchPage=registryPage,getVersion=registry
   for(let page=1;page<totalPages;page++)pages.push(await fetchPage(page,first.total));
   const after=await getVersion();
   if(JSON.stringify(before)!==JSON.stringify(after))throw Error('Official registry changed during collection');
-  let rows=0,active=0,statusDisagreements=0,missingIdentity=0;
+  let rows=0,active=0,statusDisagreements=0,missingIdentity=0,lastMedicineId=0;
   for(const p of pages){
     for(const r of p.rows){
       if(ids.has(r.medicineId))throw Error('Duplicate medicine identity across registry pages');ids.add(r.medicineId);
+      if(r.medicineId<=lastMedicineId)throw Error('Official registry no longer follows the requested unique medicine ID order');lastMedicineId=r.medicineId;
       const key=String(r.regNumber||'').replace(/\D/g,'');
       if(/^\d{12}$/.test(key)){const old=registrations.get(key);if(old&&old!==r.medicineId)throw Error('Ambiguous registry registration identity');registrations.set(key,r.medicineId);}
       rows++;if(r.active===1)active++;
@@ -65,7 +66,7 @@ export async function collectRegistry(fetchPage=registryPage,getVersion=registry
     missingIdentity+=p.summaries.filter(x=>x.identityMissing).length;
   }
   if(rows!==first.total||active!==before.activeRecords)throw Error('Complete registry counts do not reconcile with official catalog');
-  return {schema:'public-moh-registry-capture-v1',version:before,totalRecords:rows,totalPages,activeRecords:active,statusDisagreements,recordsWithMissingIdentity:missingIdentity,complete:true,pages};
+  return {schema:'public-moh-registry-capture-v1',sortBy:'medicineId',sortDirection:'asc',version:before,totalRecords:rows,totalPages,uniqueMedicineIds:ids.size,activeRecords:active,statusDisagreements,recordsWithMissingIdentity:missingIdentity,complete:true,pages};
 }
 
 export async function runCollection(){
