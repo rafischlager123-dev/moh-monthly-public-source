@@ -101,7 +101,7 @@ export async function runCollection(){
   }
   const {pages,...registryProof}=registry;
   const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,associationDiscoveryTransport:'ordinary HTTPS',monthlyRecordCoverage,releases:downloaded,registry:{...registryProof,pages:registryPages}};
-  const compact=await buildCompactPackage({manifest,originals:originalBytes,registryRows:registry.pages.flatMap(p=>p.rows)});
+  const compact=await buildCompactPackage({manifest,originals:originalBytes,registryRows:registry.pages.flatMap(p=>p.rows),originalAudits:originalRows});
   manifest.compactPackage={indexFeedPath:snapshot+'/package-index.xml',sha256:compact.index.package.sha256,bytes:compact.index.package.bytes,parts:compact.index.package.parts.length,sourceAcceptanceBasis:compact.index.sourceAcceptanceBasis};
   for(const file of compact.files)await save(file.path,file.text);
   await save('public/catalog.json',JSON.stringify(manifest,null,2));
