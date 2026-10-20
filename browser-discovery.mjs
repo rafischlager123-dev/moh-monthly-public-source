@@ -9,7 +9,8 @@ export function allowedBrowserUrl(value) {
 export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,pageUrl=MONTHLY_PAGE}={}) {
   const target=new URL(pageUrl);
   if(!allowedBrowserUrl(target.href)||target.hostname!=='www.gov.il'||target.pathname.toLowerCase()!=='/he/departments/dynamiccollectors/new-israeli-drugs'||target.search!=='?skip=0'||target.hash)throw Error('Discovery must use the official monthly listing');
-  let browser,context,expired=false,closePromise,timer;
+  let browser,context,page,expired=false,closePromise,timer;
+  const blockedResources=[];
   const started=Date.now(),items=[],seen=new Set();
   const close=()=>closePromise??=(browser?Promise.resolve(browser.close()).catch(()=>{}):Promise.resolve());
   const remaining=max=>{const n=budgetMs-(Date.now()-started);if(expired||n<=0)throw Error('Browser discovery time budget exceeded');return Math.max(1,Math.min(max,n));};
@@ -20,10 +21,13 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,
     context=await browser.newContext();
     await context.route('**/*',route=>{
       const request=route.request();
-      if(!allowedBrowserUrl(request.url())||['image','font','media'].includes(request.resourceType()))return route.abort();
+      if(!allowedBrowserUrl(request.url())||['image','font','media'].includes(request.resourceType())){
+        if(['document','script','stylesheet','xhr','fetch'].includes(request.resourceType())&&blockedResources.length<30){const u=new URL(request.url());blockedResources.push({url:u.origin+u.pathname,type:request.resourceType()});}
+        return route.abort();
+      }
       return route.continue();
     });
-    const page=await context.newPage();
+    page=await context.newPage();
     const response=await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:remaining(25000)});
     if(!response||response.status()>=400)throw Error('Official listing blocked: HTTP '+(response?.status()??'unknown'));
     for(let n=0;n<3;n++){
@@ -61,5 +65,13 @@ export async function discoverMonthly(launch,{baseline='2025-12',budgetMs=90000,
   })();
   const deadline=new Promise((_resolve,reject)=>{timer=setTimeout(()=>{expired=true;void close();reject(Error('Browser discovery time budget exceeded'));},budgetMs);});
   try{return await Promise.race([operation,deadline]);}
+  catch(error){
+    // Public page diagnostics only, captured before closing the disposable cloud
+    // browser. Never act on a challenge or inspect a user's authenticated state.
+    if(!expired&&page&&typeof page.title==='function'){
+      try{error.discoveryDiagnostics={title:await page.title(),url:page.url(),bodyText:(await page.locator('body').innerText({timeout:2000})).slice(0,5000),scriptUrls:await page.locator('script[src]').evaluateAll(es=>es.map(e=>e.src)),blockedResources};}catch{}
+    }
+    throw error;
+  }
   finally{clearTimeout(timer);await close();if(expired)void operation.catch(()=>{});}
 }
