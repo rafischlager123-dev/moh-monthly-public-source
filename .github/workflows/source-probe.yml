@@ -21,4 +21,6 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.64.1
       - name: Test official listing, exact Excel downloads and registry access
-        run: node probe.mjs
+        env:
+          MOH_BROWSER_MODE: headed
+        run: xvfb-run --auto-servernum node probe.mjs
