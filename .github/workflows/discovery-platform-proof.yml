@@ -13,12 +13,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: windows-2025
-            channel: msedge
           - runner: macos-15-intel
-            channel: chrome
+            engine: firefox
+          - runner: macos-15-intel
+            engine: webkit
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 7
+    timeout-minutes: 9
     steps:
       - name: Read public source proof
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -28,7 +28,10 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.64.1
+      - name: Install the selected official browser engine
+        run: npx --no-install playwright install ${{ matrix.engine }}
       - name: Discover the full official catalog and download its original Excel files
         env:
-          MOH_BROWSER_CHANNEL: ${{ matrix.channel }}
+          MOH_BROWSER_ENGINE: ${{ matrix.engine }}
+          MOH_PROOF_MODE: direct
         run: node discovery-platform-proof.mjs
