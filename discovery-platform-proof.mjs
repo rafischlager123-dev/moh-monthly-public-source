@@ -9,7 +9,7 @@ if(process.env.GITHUB_ACTIONS!=='true'||process.env.GITHUB_REPOSITORY!=='rafisch
 const report={schema:'public-moh-direct-discovery-proof-v1',runId:process.env.GITHUB_RUN_ID,runnerOS:process.env.RUNNER_OS,runnerArch:process.env.RUNNER_ARCH,browserChannel:process.env.MOH_BROWSER_CHANNEL,startedAt:new Date().toISOString(),sourceDiscoveryPassed:false,originalDownloadsPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false};
 try{
   const {chromium}=await import('playwright');
-  const catalog=await discoverMonthly(()=>chromium.launch({channel:process.env.MOH_BROWSER_CHANNEL,headless:false,timeout:30000}),{pageUrl:'https://www.gov.il/he/Departments/DynamicCollectors/new-israeli-drugs?skip=0',budgetMs:110000});
+  const catalog=await discoverMonthly(()=>chromium.launch({channel:process.env.MOH_BROWSER_CHANNEL,headless:false,timeout:30000}),{pageUrl:'https://www.gov.il/he/Departments/DynamicCollectors/new-israeli-drugs?skip=0',budgetMs:150000,standardPageLoading:true});
   report.catalog=catalog;report.catalogSnapshotSha256=await digest(bytesOf(catalog.listingSnapshot));report.sourceDiscoveryPassed=true;
   const known=JSON.parse(await readFile(new URL('./verified-catalog-seed.json',import.meta.url),'utf8'));
   const expected=new Map(known.releases.map(r=>[r.url,r.sha256]));report.files=[];
