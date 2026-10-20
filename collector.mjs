@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {monthlyFileUrl,publicationPeriods,fetchMonthlyFile,registryVersion,registryPage,rss,digest,bytesOf} from './public-core.mjs';
 import {discoverMonthly} from './browser-discovery.mjs';
 import {originalLinksFromHtml,reconcileNewRegistrationCoverage} from './directory-reconciliation.mjs';
+import {buildCompactPackage} from './compact-package.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 const association='https://psi.org.il/he/pharma-rules';
 
@@ -73,10 +74,11 @@ export async function runCollection(){
   const alternate=await associationLinks(),catalog=mergeCatalog(seed,prior,direct,alternate);
   const out=path.resolve('collection-output'),snapshot='public/runs/'+runId,files=[];
   const save=async(name,data)=>{if(!/^public\/[A-Za-z0-9_./-]+$/.test(name)||name.includes('..'))throw Error('Invalid public output path');const bytes=Buffer.from(data);if(bytes.length>4*1024*1024)throw Error('Public output exceeds size bound');await mkdir(path.dirname(path.join(out,name)),{recursive:true});await writeFile(path.join(out,name),bytes);files.push({path:name,bytes:bytes.length,sha256:await digest(bytes)});};
-  const downloaded=[];
+  const downloaded=[],originalBytes=[];
   await mkdir('source-http-proof',{recursive:true});
   for(const release of catalog.releases){
     const file=await fetchMonthlyFile(release);
+    originalBytes.push(file.bytes);
     if(release.sha256&&file.proof.sha256!==release.sha256)throw Error('An archived official release changed; previous publication retained');
     await writeFile('source-http-proof/'+file.proof.sha256+'.xlsx',file.bytes);
     const manifest={schema:'rafa-monthly-source-manifest-v1',url:release.url,label:release.label,periods:release.periods,publicationDate:release.publicationDate||null,sha256:file.proof.sha256,bytes:file.proof.bytes,fetchedAt:file.proof.fetchedAt};
@@ -99,6 +101,9 @@ export async function runCollection(){
   }
   const {pages,...registryProof}=registry;
   const manifest={...catalog,runId,startedAt,completedAt:new Date().toISOString(),originalExcelDownloadsPassed:true,companyWorkbookAccess:false,monthlyRefreshWorking:false,directGovernmentDiscoveryError:directError,associationDiscoveredReleaseCount:alternate.length,associationDiscoveryTransport:'ordinary HTTPS',monthlyRecordCoverage,releases:downloaded,registry:{...registryProof,pages:registryPages}};
+  const compact=await buildCompactPackage({manifest,originals:originalBytes,registryRows:registry.pages.flatMap(p=>p.rows)});
+  manifest.compactPackage={indexFeedPath:snapshot+'/package-index.xml',sha256:compact.index.package.sha256,bytes:compact.index.package.bytes,parts:compact.index.package.parts.length,sourceAcceptanceBasis:compact.index.sourceAcceptanceBasis};
+  for(const file of compact.files)await save(file.path,file.text);
   await save('public/catalog.json',JSON.stringify(manifest,null,2));
   await save(snapshot+'/manifest.json',JSON.stringify(manifest,null,2));
   await save('public/latest.xml',rss(manifest,'public-moh-collection-'+runId,manifest.completedAt,'https://github.com/rafischlager123-dev/moh-monthly-public-source'));
