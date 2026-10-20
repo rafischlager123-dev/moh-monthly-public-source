@@ -7,6 +7,7 @@ import {monthlyFileUrl,publicationPeriods,fetchMonthlyFile,registryVersion,regis
 import {discoverMonthly} from './browser-discovery.mjs';
 import {originalLinksFromHtml,reconcileNewRegistrationCoverage} from './directory-reconciliation.mjs';
 import {buildCompactPackage} from './compact-package.mjs';
+import {sourceAttempt,sourceAttemptFeed} from './source-attempt.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 const association='https://psi.org.il/he/pharma-rules';
 
@@ -104,6 +105,9 @@ export async function runCollection(){
   const compact=await buildCompactPackage({manifest,originals:originalBytes,registryRows:registry.pages.flatMap(p=>p.rows),originalAudits:originalRows});
   manifest.compactPackage={indexFeedPath:snapshot+'/package-index.xml',sha256:compact.index.package.sha256,bytes:compact.index.package.bytes,parts:compact.index.package.parts.length,sourceAcceptanceBasis:compact.index.sourceAcceptanceBasis};
   for(const file of compact.files)await save(file.path,file.text);
+  const attempt=sourceAttempt({state:'Ready',runId,codeCommit:process.env.GITHUB_SHA,completedAt:manifest.completedAt,packageSha256:compact.index.package.sha256});
+  await save('public/attempt.json',JSON.stringify(attempt,null,2));
+  await save('public/attempt.xml',sourceAttemptFeed(attempt));
   await save('public/catalog.json',JSON.stringify(manifest,null,2));
   await save(snapshot+'/manifest.json',JSON.stringify(manifest,null,2));
   await save('public/latest.xml',rss(manifest,'public-moh-collection-'+runId,manifest.completedAt,'https://github.com/rafischlager123-dev/moh-monthly-public-source'));
