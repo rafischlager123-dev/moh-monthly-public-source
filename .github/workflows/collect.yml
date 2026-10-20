@@ -22,6 +22,8 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.64.1
+      - name: Install fixed public original-file registration reader
+        run: python -m pip install --disable-pip-version-check --no-cache-dir openpyxl==3.1.5 et_xmlfile==2.0.0
       - name: Collect original Excel files and a complete stable public registry
         run: xvfb-run --auto-servernum node collector.mjs
       - name: Publish public source data in one commit
