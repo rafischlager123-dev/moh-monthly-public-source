@@ -1,0 +1,28 @@
+name: Collect original public monthly Excel sources
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: public-monthly-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Read public collector code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Install fixed official browser library
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.64.1
+      - name: Collect original Excel files and a complete stable public registry
+        run: xvfb-run --auto-servernum node collector.mjs
+      - name: Publish public source data in one commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node publish.mjs
