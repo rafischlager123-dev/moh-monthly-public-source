@@ -1,5 +1,25 @@
 # Automatic public monthly source collection
 
+The 20 October HTTPS source proof passed in GitHub run `39448701022`: the live
+association directory rediscovered September without its URL in the prior
+ledger, all seven exact government originals were downloaded, and 207 original
+registrations matched the complete 15,262-record official registry capture.
+Omitting September correctly exposed 20 missing registrations. This method
+needs no browser provider, new account, monthly upload, or local computer.
+
+The collector now reads the association's published HTML over ordinary HTTPS
+and checks actual XLSX registration sets against official `newMedicine=1`
+records through the last full month. A gap, extra identity, wrong period,
+changed original hash, or registry inconsistency stops publication and retains
+the last good collection. The current month's registrations remain outside the
+finished-month coverage window until that month ends.
+
+Record-set reconciliation does not prove discovery of every revised publication
+edition. `officialCatalogCompleteAtCurrentCollection` and
+`discoveryCoverageReviewRequired` retain their separate meanings. A passing
+registration check does not waive the private consumer's catalog gate or imply
+that the whole monthly workbook refresh is implemented.
+
 The full collection run collected seven original government Excel releases and
 15,262 unique registry medicine IDs across 153 pages. Every published original,
 RSS byte payload and registry page passed independent readback checks.
