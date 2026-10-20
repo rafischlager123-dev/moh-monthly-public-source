@@ -1,7 +1,7 @@
 import {webcrypto} from 'node:crypto';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {discoverMonthly} from './browser-discovery.mjs';
-import {fetchMonthlyFile,registryPage,registryVersion} from './public-core.mjs';
+import {fetchMonthlyFile,monthlyFileUrl,publicationPeriods,registryPage,registryVersion} from './public-core.mjs';
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 
 const expected=new Map([
@@ -14,12 +14,41 @@ const expected=new Map([
   ['files_databases_drugs_new_israeli_drugs_07102026.xlsx','6b7e1a7ca4519fafe43b2ed73692bb503f1829612ef74bcd90729b4747042cd3']
 ]);
 const headed=process.env.MOH_BROWSER_MODE==='headed';
+async function discoverAssociation(chromium){
+  const source='https://psi.org.il/he/pharma-rules';
+  const browser=await chromium.launch({channel:'chrome',headless:!headed,timeout:25000});
+  try{
+    const context=await browser.newContext(),page=await context.newPage();
+    const response=await page.goto(source,{waitUntil:'domcontentloaded',timeout:25000});
+    if(!response?.ok())throw Error('Association discovery page HTTP '+response?.status());
+    await page.waitForSelector('a[href*="/BlobFolder/dynamiccollectorresultitem/"]',{timeout:15000});
+    const anchors=await page.locator('a[href]').evaluateAll(elements=>elements.map(a=>({url:a.href,label:(a.innerText||'').trim()})));
+    const releases=[],seen=new Set();
+    for(const anchor of anchors){
+      const url=monthlyFileUrl(anchor.url);
+      if(!url||seen.has(url)||!anchor.label.includes('תכשירים חדשים שנרשמו'))continue;
+      const periods=publicationPeriods(anchor.label);
+      if(periods.at(-1)<'2025-12')continue;
+      seen.add(url);releases.push({url,label:anchor.label,periods,publicationDate:null,publicationDateMissing:true,discoverySource:source});
+    }
+    if(!releases.length||releases.length>16)throw Error('Association contains no bounded set of official monthly links');
+    releases.sort((a,b)=>a.periods.at(-1).localeCompare(b.periods.at(-1)));
+    return {source,discoveryType:'Third-party public link directory; downloads remain original government files',coverageComplete:false,publicationDatesComplete:false,releases};
+  }finally{await browser.close();}
+}
 const report={startedAt:new Date().toISOString(),executedIn:process.env.GITHUB_ACTIONS==='true'?'GitHub-hosted standard Ubuntu runner':'Local test',browserMode:headed?'headed Chrome with virtual display':'headless Chrome',sourceAccessPassed:false,catalogPassed:false,downloadsPassed:false,registryAccessPassed:false,companyWorkbookAccess:false,monthlyRefreshWorking:false,monthlyScheduleEnabled:false};
 let phase='browser-discovery';
 try{
   const {chromium}=await import('playwright');
-  report.catalog=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:!headed,timeout:25000}));
-  report.catalogPassed=true;
+  try{
+    report.catalog=await discoverMonthly(()=>chromium.launch({channel:'chrome',headless:!headed,timeout:25000}));
+    report.catalogPassed=true;
+  }catch(error){
+    report.directGovernmentDiscoveryError=String(error.message||error).slice(0,1500);
+    phase='association-link-discovery';
+    report.catalog=await discoverAssociation(chromium);
+    report.alternateDiscoveryPassed=true;
+  }
   if(report.catalog.releases.length>16)throw Error('Source acquisition exceeds the bounded test size');
   phase='exact-monthly-downloads';report.files=[];
   await mkdir('test-output/files',{recursive:true});
@@ -34,7 +63,8 @@ try{
   const before=await registryVersion(),page=await registryPage(0),after=await registryVersion();
   if(JSON.stringify(before)!==JSON.stringify(after))throw Error('Registry version changed during access test');
   report.registry={version:before,totalRecords:page.total,sampledRecords:page.records,pageSha256:page.sha256,completeRegistryCollection:false};
-  report.registryAccessPassed=true;report.sourceAccessPassed=true;phase='complete';
+  report.registryAccessPassed=true;report.sourceAccessPassed=report.catalogPassed;phase='complete';
+  if(!report.catalogPassed){report.coverageAcceptancePassed=false;report.remainingDiscoveryIssue='Public directory found genuine official files, but does not establish a complete government release catalog or every original publication date';process.exitCode=2;}
 }catch(error){report.failedPhase=phase;report.error=String(error.message||error).slice(0,1500);process.exitCode=2;}
 report.finishedAt=new Date().toISOString();
 report.remainingAcceptance=['Complete stable registry capture','Official monthly worksheet/schema validation','Microsoft 365 source transport/readback','Private master merge and conflict verification','Coordinated workbook/dashboard publication and rollback','Unattended recurring execution acceptance'];
