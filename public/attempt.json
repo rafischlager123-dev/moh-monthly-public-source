@@ -1,10 +1,10 @@
 {
   "schema": "public-moh-source-attempt-v1",
   "state": "Ready",
-  "runId": "40256635722",
-  "codeCommit": "2436917e25e37f21b9ba0177d7c1e95050e358ce",
-  "completedAt": "2026-10-26T01:58:38.874Z",
-  "packageSha256": "e44b74559c26e7096c1da80ff34ef10a21935fabda57b992d2bfa3ce8c5081e5",
+  "runId": "40435210511",
+  "codeCommit": "731a6eefba9e9dc49982eda336f305f5a111c20b",
+  "completedAt": "2026-10-27T01:55:25.442Z",
+  "packageSha256": "cc14d8a7e2c05ba91157b27aeb99d5cd989dd57d474c17ca4fcc3d5aea21a48a",
   "reason": "Exact originals and complete registry passed validation",
   "companyWorkbookAccess": false,
   "productionPublicationPerformed": false
