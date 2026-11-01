@@ -1,11 +1,11 @@
 {
   "schema": "public-moh-source-attempt-v1",
-  "state": "Ready",
-  "runId": "41158408943",
-  "codeCommit": "57fbc8e928095129ead34fe274bb8ce198b33e5c",
-  "completedAt": "2026-10-31T02:07:57.784Z",
-  "packageSha256": "cf92ee815c5e784a22d9137201c529cdb3ca66d4fe06012cf91c6dee3be19748",
-  "reason": "Exact originals and complete registry passed validation",
+  "state": "Held",
+  "runId": "41264106655",
+  "codeCommit": "82222fdcf01de1d2c50f1b92451c3ae285a71235",
+  "completedAt": "2026-11-01T02:13:37.526Z",
+  "packageSha256": null,
+  "reason": "Source collection or publication failed; retain the last good package and retry",
   "companyWorkbookAccess": false,
   "productionPublicationPerformed": false
 }
