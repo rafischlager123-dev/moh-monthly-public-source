@@ -1,9 +1,9 @@
 {
   "schema": "public-moh-source-attempt-v1",
   "state": "Held",
-  "runId": "42149879847",
-  "codeCommit": "581246b0b31b117e9a3b6ca3056534f43b430f5f",
-  "completedAt": "2026-11-06T02:24:24.761Z",
+  "runId": "42327641692",
+  "codeCommit": "517b74b58d4972ba990ccf2f04c55789e8f08726",
+  "completedAt": "2026-11-07T02:10:17.540Z",
   "packageSha256": null,
   "reason": "Source collection or publication failed; retain the last good package and retry",
   "companyWorkbookAccess": false,
